@@ -60,6 +60,8 @@ export default function App() {
   const [p2Elems, setP2Elems] = useState<ElementId[]>(['ice', 'plant']);
   const [opponentName, setOpponentName] = useState<string>('EasyBot_AI');
   const [opponentWins, setOpponentWins] = useState<number>(5);
+  const [isPrivateRoom, setIsPrivateRoom] = useState<boolean>(false);
+  const [roomCode, setRoomCode] = useState<string>('');
 
   // Rankings
   const [rankings, setRankings] = useState<PlayerDB[]>([]);
@@ -133,6 +135,11 @@ export default function App() {
       return;
     }
 
+    if (isPrivateRoom && !roomCode.trim()) {
+      alert('친구와 함께 셜전하려면 방 코드를 입력해 주세요!');
+      return;
+    }
+
     localStorage.setItem('stickman_username', username.trim());
     setIsRegistered(true);
 
@@ -172,7 +179,8 @@ export default function App() {
         type: 'join_queue',
         username: username.trim(),
         elem1: selectedElements[0],
-        elem2: selectedElements[1]
+        elem2: selectedElements[1],
+        roomCode: isPrivateRoom ? roomCode.trim() : undefined
       };
       socket.send(JSON.stringify(msg));
     };
@@ -480,34 +488,90 @@ export default function App() {
         
         {/* LEFT COLUMN: Element Selectors & Stats */}
         <div className="lg:col-span-1 flex flex-col gap-5">
-          {/* USER REGISTRATION */}
-          <div className="bg-slate-900/60 border border-slate-900 rounded-xl p-5 shadow-xl backdrop-blur-sm">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-2">
-              <User size={14} />
-              <span>플레이어 정보 등록</span>
-            </h2>
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                value={username} 
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="고유 닉네임 입력..." 
-                disabled={queueStatus !== 'idle'}
-                className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg font-medium text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50 transition-colors"
-              />
-              <button 
-                onClick={() => {
-                  if (username.trim()) {
-                    setIsRegistered(true);
-                    localStorage.setItem('stickman_username', username.trim());
-                    fetchRankings();
-                  }
-                }} 
-                disabled={queueStatus !== 'idle'}
-                className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-bold text-white transition-colors cursor-pointer disabled:opacity-50"
-              >
-                저장
-              </button>
+          {/* USER REGISTRATION & MATCH MODE SETTING */}
+          <div className="bg-slate-900/60 border border-slate-900 rounded-xl p-5 shadow-xl backdrop-blur-sm flex flex-col gap-4">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-2">
+                <User size={14} />
+                <span>플레이어 정보 등록</span>
+              </h2>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={username} 
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="고유 닉네임 입력..." 
+                  disabled={queueStatus !== 'idle'}
+                  className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg font-medium text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50 transition-colors"
+                />
+                <button 
+                  onClick={() => {
+                    if (username.trim()) {
+                      setIsRegistered(true);
+                      localStorage.setItem('stickman_username', username.trim());
+                      fetchRankings();
+                    }
+                  }} 
+                  disabled={queueStatus !== 'idle'}
+                  className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-bold text-white transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  저장
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-800/80 pt-3">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2.5 flex items-center gap-1.5">
+                <span>⚔️ 대전 모드 선택</span>
+              </h2>
+              
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-950 rounded-lg border border-slate-800/60 text-xs mb-3">
+                <button
+                  type="button"
+                  onClick={() => setIsPrivateRoom(false)}
+                  disabled={queueStatus !== 'idle'}
+                  className={`py-1.5 px-2 rounded-md font-bold transition-all ${!isPrivateRoom ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+                >
+                  공개 매칭
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPrivateRoom(true)}
+                  disabled={queueStatus !== 'idle'}
+                  className={`py-1.5 px-2 rounded-md font-bold transition-all ${isPrivateRoom ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
+                >
+                  친선전 (방 코드)
+                </button>
+              </div>
+
+              {isPrivateRoom && (
+                <div className="space-y-2.5 animate-fadeIn">
+                  <div className="flex gap-1.5">
+                    <input 
+                      type="text" 
+                      value={roomCode} 
+                      onChange={(e) => setRoomCode(e.target.value)}
+                      placeholder="방 코드 입력 (예: 1234)" 
+                      disabled={queueStatus !== 'idle'}
+                      className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg font-mono text-sm text-indigo-300 focus:outline-none focus:border-indigo-500 disabled:opacity-50 transition-colors uppercase"
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const code = Math.floor(1000 + Math.random() * 9000).toString();
+                        setRoomCode(code);
+                      }}
+                      disabled={queueStatus !== 'idle'}
+                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-semibold text-slate-200 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      랜덤 생성
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-400 leading-normal">
+                    본인의 방 코드를 친구에게 공유하거나, 친구가 생성한 방 코드를 입력하고 매칭을 시작하세요!
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -574,10 +638,11 @@ export default function App() {
               <div>
                 <span className="font-bold text-sm text-slate-300">
                   {queueStatus === 'connected' ? '실시간 1v1 대전 진행 중' : 
-                   queueStatus === 'searching' ? '대기방 연동 및 상대 탐색 중...' : '전투 준비 인벤토리 완료'}
+                   queueStatus === 'searching' ? (isPrivateRoom ? `비공개 방 '${roomCode}' 대기 중...` : '대기방 연동 및 상대 탐색 중...') : '전투 준비 인벤토리 완료'}
                 </span>
                 <p className="text-[11px] text-slate-500">
-                  {queueStatus === 'connected' ? '실시간 Supabase WebSockets 동기화 중' : '아래 매칭 버튼을 눌러 격투를 연합하세요.'}
+                  {queueStatus === 'connected' ? '실시간 Supabase WebSockets 동기화 중' : 
+                   queueStatus === 'searching' ? (isPrivateRoom ? '친구가 이 방 코드를 입력하고 입장하면 대전이 자동 시작됩니다.' : '상대 플레이어를 검색하고 있습니다. 4.5초 후 매칭이 안 되면 AI와 전투가 매칭됩니다.') : '아래 매칭 버튼을 눌러 격투를 시작하세요.'}
                 </p>
               </div>
             </div>

@@ -132,7 +132,7 @@ export interface GameMatchState {
 }
 
 export type GameWSMessage =
-  | { type: 'join_queue'; username: string; elem1: ElementId; elem2: ElementId }
+  | { type: 'join_queue'; username: string; elem1: ElementId; elem2: ElementId; roomCode?: string }
   | { type: 'leave_queue' }
   | { type: 'match_found'; roomId: string; p1: PlayerDB; p2: PlayerDB; side: 1 | 2; p1Elems: ElementId[]; p2Elems: ElementId[] }
   | { type: 'client_input'; moveX: number; jump: boolean; skill: 'A' | 'S' | 'R' | null; mouseClickPos?: Vector2D }

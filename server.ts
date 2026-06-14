@@ -76,22 +76,42 @@ interface QueuePlayer {
   elem1: ElementId;
   elem2: ElementId;
   playerId: string;
+  roomCode?: string;
 }
 let waitingQueue: QueuePlayer[] = [];
 
 // Monitor queue and match players
 setInterval(() => {
-  if (waitingQueue.length >= 2) {
-    const p1 = waitingQueue.shift()!;
-    const p2 = waitingQueue.shift()!;
-    startMatchBetween(p1, p2);
-  } else if (waitingQueue.length === 1) {
-    // If waiting for over 4.5 seconds, start a bot match
-    const p1 = waitingQueue[0];
-    // Check if this player has been in queue for a while or if they want to speed match
-    // Let's boot a Bot after a safe timeout, or trigger it directly.
-    // To be responsive, we can let them wait up to 4 seconds, or match immediately if they hit AI start.
+  // 1. Match public queue players (those without roomCode)
+  const publicPlayers = waitingQueue.filter(p => !p.roomCode);
+  if (publicPlayers.length >= 2) {
+    const qp1 = publicPlayers[0];
+    const qp2 = publicPlayers[1];
+    waitingQueue = waitingQueue.filter(p => p !== qp1 && p !== qp2);
+    startMatchBetween(qp1, qp2);
   }
+
+  // 2. Match private roomCode players
+  const roomsMap = new Map<string, QueuePlayer[]>();
+  waitingQueue.forEach(p => {
+    if (p.roomCode) {
+      const cleanCode = p.roomCode.trim().toLowerCase();
+      if (cleanCode) {
+        const list = roomsMap.get(cleanCode) || [];
+        list.push(p);
+        roomsMap.set(cleanCode, list);
+      }
+    }
+  });
+
+  roomsMap.forEach((players, rCode) => {
+    if (players.length >= 2) {
+      const qp1 = players[0];
+      const qp2 = players[1];
+      waitingQueue = waitingQueue.filter(p => p !== qp1 && p !== qp2);
+      startMatchBetween(qp1, qp2);
+    }
+  });
 }, 1000);
 
 function startMatchBetween(qp1: QueuePlayer, qp2: QueuePlayer) {
@@ -1110,16 +1130,19 @@ wss.on('connection', (ws) => {
           username: msg.username,
           elem1: msg.elem1,
           elem2: msg.elem2,
-          playerId: dbPlayer.id
+          playerId: dbPlayer.id,
+          roomCode: msg.roomCode
         };
 
-        // If wait timeout triggers, we start the bot match
-        const botTimer = setTimeout(() => {
-          const index = waitingQueue.findIndex(qp => qp.socket === ws);
-          if (index !== -1) {
-            startBotMatchFor(newQ);
-          }
-        }, 3500); // 3.5 seconds match fallback
+        // If wait timeout triggers, we start the bot match (Only for public matchmaking!)
+        if (!msg.roomCode) {
+          const botTimer = setTimeout(() => {
+            const index = waitingQueue.findIndex(qp => qp.socket === ws);
+            if (index !== -1 && !waitingQueue[index].roomCode) {
+              startBotMatchFor(newQ);
+            }
+          }, 4500); // 4.5 seconds match fallback for public matchmaking
+        }
 
         waitingQueue.push(newQ);
 
