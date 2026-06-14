@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Stickman Element Duel",
+  "description": "실시간 원소 선택과 융합 궁극기를 지원하는 스틱맨 1대1 대전 멀티플레이어 게임",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
